@@ -87,13 +87,11 @@ public class BuffDocument implements Document {
 			}
 			return null;
 		}
-		public Document getDocument() {
-			return BuffDocument.this;
-		}
 	}
 
 
-	private Object convertFromStructValue(Class returnType, Object structValue) {
+	@SuppressWarnings("unchecked")
+	private Object convertFromStructValue(Class<?> returnType, Object structValue) {
 		
 		if (returnType.isArray()) {
 			return mapToArray(returnType.getComponentType(),(Array)structValue);
@@ -108,12 +106,13 @@ public class BuffDocument implements Document {
 		}
 		
 		if (DocumentView.class.isAssignableFrom(returnType)) {
-			return new BuffDocument((Struct)structValue).as(returnType);
+			return new BuffDocument((Struct)structValue).as((Class<? extends DocumentView>) returnType);
 		}
 
 		return returnType.cast(structValue);
 	}
 	
+	@SuppressWarnings("unchecked")
 	private <T> T[] mapToArray(Class<T> arrayType, Array array) {
 		T [] result = (T[])java.lang.reflect.Array.newInstance(arrayType, array.size());
 		for (int i = 0; i < array.size(); i++) {
