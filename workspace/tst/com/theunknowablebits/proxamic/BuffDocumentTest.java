@@ -52,5 +52,6 @@ class BuffDocumentTest {
 			assertEquals(String.class, c.getActualTypeArguments()[0]);
 		}
 	
+		
 	}
 }
