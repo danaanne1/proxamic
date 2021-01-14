@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +61,7 @@ public class BuffDocument implements Document {
 		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			if (method.isAnnotationPresent(Getter.class))
-				return handleGet(proxy,method,args,method.getAnnotation(Getter.class).value());
+				return convertFromStructValue(method.getReturnType(), root.get(method.getAnnotation(Getter.class).value()));
 			if (method.isAnnotationPresent(Setter.class))
 				return handleSet(proxy,method,args,method.getAnnotation(Setter.class).value());
 			if (method.isDefault())
@@ -71,18 +72,15 @@ public class BuffDocument implements Document {
 			if (methodName.equals("equals")) {
 				if (args.length!=1)
 					return false;
-				if (!Proxy.isProxyClass(args[1].getClass()))
-					return false;
-				InvocationHandler handler = Proxy.getInvocationHandler(args[1]);
-				if (!BuffHandler.class.isAssignableFrom(handler.getClass()))
-					return false;
-				return BuffDocument.this.equals(((BuffHandler)handler).getDocument());
+				if (args[0] instanceof DocumentView)
+					return BuffDocument.this.equals(((DocumentView)args[0]).document());
+				return false;
 			}
 			if (methodName.equals("hashCode")) {
 				return BuffDocument.this.hashCode();
 			}
 			if (methodName.startsWith("get")) {
-				return handleGet(proxy, method, args, methodName.substring(3));
+				return convertFromStructValue(method.getReturnType(), root.get(methodName.substring(3)));
 			}
 			if (methodName.startsWith("set")) {
 				return handleSet(proxy, method, args, methodName.substring(3));
@@ -94,62 +92,47 @@ public class BuffDocument implements Document {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private Object handleGet(Object proxy, Method method, Object [] args, String fieldName) {
-		// determine the result type of the method
-		Class<?> resultType = method.getReturnType();
+
+	private Object convertFromStructValue(Class returnType, Object structValue) {
 		
-		if (resultType.isArray()) {
-			return mapToArray(resultType.getComponentType(),(Array)root.get(fieldName));
+		if (returnType.isArray()) {
+			return mapToArray(returnType.getComponentType(),(Array)structValue);
 		}
 
-		ParameterizedType genericResultType = (ParameterizedType)method.getGenericReturnType();
-
-		if (List.class.isAssignableFrom(resultType)) {
-			return mapToList((Class<?>)genericResultType.getActualTypeArguments()[0],(Array)root.get(fieldName));
+		if (List.class.isAssignableFrom(returnType)) {
+			return mapToList((Array)structValue);
 		}
 		
-		if (Map.class.isAssignableFrom(resultType)) {
-
-			return mapToMap(String.class,(Class <?>)genericResultType.getActualTypeArguments()[1], (Struct)root.get(fieldName));
+		if (Map.class.isAssignableFrom(returnType)) {
+			return mapToMap((Struct)structValue);
 		}
 		
-		// -----------------------------
-		// direct conversions below this line 
-		
-		if (DocumentView.class.isAssignableFrom(resultType)) {
-			return mapToObject((Class<? extends DocumentView>)resultType,(Struct)root.get(fieldName));
+		if (DocumentView.class.isAssignableFrom(returnType)) {
+			return new BuffDocument((Struct)structValue).as(returnType);
 		}
 
-		return mapToPrimitive(resultType,root.get(fieldName));
-
-	}
-
-	private Object mapToArray(Class<?> componentType, Array array) {
-		return null;
+		return returnType.cast(structValue);
 	}
 	
-	private <B> List<B> mapToList(Class<B> valueType, Array array) {
-		return null;
-	}
-
-	private <A,B> Map<A,B> mapToMap(Class<A> keyType, Class<B> valueType, Struct struct) {
-		return null;
-	}
-
-	private DocumentView mapToObject(Class<? extends DocumentView> type, Struct struct) {
-		return new BuffDocument(struct).as(type);
+	private <T> T[] mapToArray(Class<T> arrayType, Array array) {
+		T [] result = (T[])java.lang.reflect.Array.newInstance(arrayType, array.size());
+		for (int i = 0; i < array.size(); i++) {
+			result[i] = arrayType.cast(convertFromStructValue(arrayType, array.get(i)));
+		}
+		return result;
 	}
 	
-	private Object mapToPrimitive(Class<?> type, Object value) {
-		return type.cast(value);
+	private <B> List<B> mapToList(Array array) {
+		return null;
+	}
+
+	private <A,B> Map<A,B> mapToMap(Struct struct) {
+		return null;
 	}
 	
 	private Object handleSet(Object proxy, Method method, Object [] args, String fieldName) {
 		return null;
 	}
-
-	
 	
 	private static final Object handleDefaultMethod(Object proxy, Method method, Object [] args, Class<?> documentClass) throws Throwable {
 		// this can get very ugly between Java8 and Java 9+
@@ -170,4 +153,10 @@ public class BuffDocument implements Document {
 				.invokeWithArguments(args);
 	}
 	
+	@Override
+	public boolean equals(Object obj) {
+		return super.equals(obj) ||
+				( BuffDocument.class.isAssignableFrom(obj.getClass()) && 
+						root.equals(((BuffDocument)obj).root));
+	}
 }
