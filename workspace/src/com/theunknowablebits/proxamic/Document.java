@@ -1,7 +1,11 @@
 package com.theunknowablebits.proxamic;
 
+/** All document classes implement this */
 public interface Document {
+
 	
-	BuffDocument document();
+	<T extends DocumentView> T as(final Class<T> documentClass);
+
+	<T extends DocumentView> T newInstance(Class<T> documentClass);
 
 }
