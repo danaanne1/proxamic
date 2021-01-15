@@ -10,8 +10,13 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
+import java.util.AbstractList;
+import java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.theunknowablebits.buff.serialization.Array;
 import com.theunknowablebits.buff.serialization.Struct;
@@ -60,54 +65,106 @@ public class BuffDocument implements Document {
 		}
 		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-			if (method.isAnnotationPresent(Getter.class))
-				return convertFromStructValue(method.getReturnType(), root.get(method.getAnnotation(Getter.class).value()));
-			if (method.isAnnotationPresent(Setter.class))
-				return handleSet(proxy,method,args,method.getAnnotation(Setter.class).value());
-			if (method.isDefault())
+			if (method.isAnnotationPresent(Getter.class)) {
+				return convertFromStructValue(method.getGenericReturnType(), root.get(method.getAnnotation(Getter.class).value()));
+			}
+			if (method.isAnnotationPresent(Setter.class)) {
+				return fluently
+						(
+								proxy,
+								method,
+								root.put 
+								(
+										method.getAnnotation(Setter.class).value(), 
+										convertToStructValue
+										(
+												method.getGenericParameterTypes()[0],
+												args[0]
+										)
+								)
+							);
+			}
+			if (method.isDefault()) {
 				return handleDefaultMethod(proxy,method,args,documentClass);
+			}
 			String methodName = method.getName();
-			if (methodName.equals("document"))
+			if (methodName.equals("document")) { 
 				return BuffDocument.this;
+			}
 			if (methodName.equals("equals")) {
-				if (args.length!=1)
+				if (args.length!=1) 
 					return false;
-				if (args[0] instanceof DocumentView)
+				if (args[0] instanceof DocumentView) 
 					return BuffDocument.this.equals(((DocumentView)args[0]).document());
 				return false;
 			}
 			if (methodName.equals("hashCode")) {
 				return BuffDocument.this.hashCode();
 			}
-			if (methodName.startsWith("get")) {
-				return convertFromStructValue(method.getReturnType(), root.get(methodName.substring(3)));
+			if (methodName.startsWith("get")) { 
+				return convertFromStructValue(method.getGenericReturnType(), root.get(methodName.substring(3)));
 			}
 			if (methodName.startsWith("set")) {
-				return handleSet(proxy, method, args, methodName.substring(3));
+				return fluently
+						(
+								proxy,
+								method,
+								root.put
+								(
+										methodName.substring(3), 
+										convertToStructValue
+										(
+												method.getGenericParameterTypes()[0], 
+												args[0]
+										)
+								)
+						);
 			}
-			return null;
+			if (methodName.startsWith("with")) {
+				root.put(methodName.substring(4), convertToStructValue(method.getGenericParameterTypes()[0], args[0]));
+				return proxy;
+			}
+			throw new RuntimeException("No path to invoke for " + method.getName());
 		}
+		private Object fluently(Object proxy, Method method, Object structValue) {
+			if ( (!method.getName().startsWith("with")) &&  method.getReturnType()==method.getParameterTypes()[0]) {
+				return convertFromStructValue( method.getGenericReturnType(), structValue );
+			} else {
+				return proxy;
+			}
+		}
+	
 	}
 
 
 	@SuppressWarnings("unchecked")
-	private Object convertFromStructValue(Class<?> returnType, Object structValue) {
+	private Object convertFromStructValue(Type methodReturnType, Object structValue) {
+		if (structValue == null) 
+			return null;
 		
-		if (returnType.isArray()) {
+		Class<?> returnType = Object.class;
+		if (methodReturnType instanceof Class) 
+			returnType = (Class<?>)methodReturnType;
+		if (methodReturnType instanceof ParameterizedType) 
+			returnType = (Class<?>)((ParameterizedType)methodReturnType).getRawType();
+
+		if (returnType.isArray()) 
 			return mapToArray(returnType.getComponentType(),(Array)structValue);
-		}
 
 		if (List.class.isAssignableFrom(returnType)) {
-			return mapToList((Array)structValue);
+			if (methodReturnType instanceof ParameterizedType) 
+				return mapToList(((ParameterizedType)methodReturnType).getActualTypeArguments()[0], (Array)structValue);
+			return mapToList(Object.class,(Array)structValue);
 		}
 		
 		if (Map.class.isAssignableFrom(returnType)) {
-			return mapToMap((Struct)structValue);
+			if (methodReturnType instanceof ParameterizedType) 
+				return mapToMap(((ParameterizedType)methodReturnType).getActualTypeArguments()[1],(Struct)structValue);
+			return mapToMap(Object.class,(Struct)structValue);
 		}
 		
-		if (DocumentView.class.isAssignableFrom(returnType)) {
+		if (DocumentView.class.isAssignableFrom(returnType)) 
 			return new BuffDocument((Struct)structValue).as((Class<? extends DocumentView>) returnType);
-		}
 
 		return returnType.cast(structValue);
 	}
@@ -121,15 +178,83 @@ public class BuffDocument implements Document {
 		return result;
 	}
 	
-	private <B> List<B> mapToList(Array array) {
-		return null;
+	private <B> List<B> mapToList(final Type elementClass, final Array array) {
+		return new AbstractList<B>() {
+			@SuppressWarnings("unchecked")
+			@Override
+			public B set(int index, B element) {
+				return (B)convertFromStructValue(elementClass, array.set(index, convertToStructValue(elementClass, element)));
+			}
+			@Override
+			public void add(int index, B element) {
+				array.add(index, convertToStructValue(elementClass, element));
+			}
+			@SuppressWarnings("unchecked")
+			@Override
+			public B remove(int index) {
+				return (B)convertFromStructValue(elementClass,array.remove(index));
+			}
+			@SuppressWarnings("unchecked")
+			@Override
+			public B get(int index) {
+				return (B)convertFromStructValue(elementClass, array.get(index));
+			}
+			@Override
+			public int size() {
+				return array.size();
+			}
+		};
 	}
 
-	private <A,B> Map<A,B> mapToMap(Struct struct) {
-		return null;
+	private <B> Map<String,B> mapToMap(final Type valueType, final Struct struct) {
+		return new AbstractMap<String, B>() {
+
+			@Override
+			public Set<Entry<String, B>> entrySet() {
+				return new AbstractSet<Map.Entry<String,B>>() {
+
+					@Override
+					public Iterator<Entry<String, B>> iterator() {
+						return new Iterator<Entry<String, B>>() {
+							final Iterator<String> delegate = struct.keySet().iterator();
+
+							@Override
+							public boolean hasNext() {
+								return delegate.hasNext();
+							}
+
+							@SuppressWarnings("unchecked")
+							@Override
+							public Entry<String, B> next() {
+								String key = delegate.next();
+								return new SimpleImmutableEntry<String, B>(key,(B) convertFromStructValue(valueType, struct.get(key)));
+							}
+							
+							@Override
+							public void remove() {
+								delegate.remove();
+							}
+							
+						};
+					}
+
+					@Override
+					public int size() {
+						return struct.keySet().size();
+					}
+				};
+			}
+			
+			@SuppressWarnings("unchecked")
+			@Override
+			public B put(String key, B value) {
+				return (B) convertFromStructValue(valueType, struct.put(key, convertToStructValue(valueType, value)));
+			}
+		
+		};
 	}
 	
-	private Object handleSet(Object proxy, Method method, Object [] args, String fieldName) {
+	private Object convertToStructValue(Type declaredType, Object value) {
 		return null;
 	}
 	
@@ -157,5 +282,10 @@ public class BuffDocument implements Document {
 		return super.equals(obj) ||
 				( BuffDocument.class.isAssignableFrom(obj.getClass()) && 
 						root.equals(((BuffDocument)obj).root));
+	}
+	
+	@Override
+	public int hashCode() {
+		return root.hashCode();
 	}
 }
