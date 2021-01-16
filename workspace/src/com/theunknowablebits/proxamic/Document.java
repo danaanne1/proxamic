@@ -1,5 +1,7 @@
 package com.theunknowablebits.proxamic;
 
+import java.nio.ByteBuffer;
+
 /** All document classes implement this */
 public interface Document {
 
@@ -8,4 +10,8 @@ public interface Document {
 
 	<T extends DocumentView> T newInstance(Class<T> documentClass);
 
+	ByteBuffer asByteBuffer();
+	
+	byte [] asBytes();
+	
 }

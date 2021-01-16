@@ -177,6 +177,14 @@ public class BuffDocument implements Document {
 		}
 		return result;
 	}
+
+	private <T> Array mapFromArray(Class<?> arrayType, Object [] value) {
+		Array result = new Array();
+		for (int i = 0; i < value.length; i++) {
+			result.add(convertToStructValue(arrayType, value[i]));
+		}
+		return result;
+	}
 	
 	private <B> List<B> mapToList(final Type elementClass, final Array array) {
 		return new AbstractList<B>() {
@@ -254,8 +262,41 @@ public class BuffDocument implements Document {
 		};
 	}
 	
+	/**
+	 * 
+	 * @param declaredType The declared type of value
+	 * @param value
+	 * @return 
+	 */
 	private Object convertToStructValue(Type declaredType, Object value) {
-		return null;
+		
+		if (value == null) 
+			return null;
+		
+		Class<?> returnType = Object.class;
+		if (declaredType instanceof Class) 
+			returnType = (Class<?>)declaredType;
+		if (declaredType instanceof ParameterizedType) 
+			returnType = (Class<?>)((ParameterizedType)declaredType).getRawType();
+
+		if (returnType.isArray()) {
+			return mapFromArray(returnType.getComponentType(),(Object [])value);
+		}
+
+		if (List.class.isAssignableFrom(returnType)) {
+			throw new RuntimeException("Cannot replace a synthetic collection. Please operate through the collections members.");
+		}
+		
+		
+		if (Map.class.isAssignableFrom(returnType)) {
+			throw new RuntimeException("Cannot replace a synthetic collection. Please operate through the collections members.");
+		}
+		
+		if (DocumentView.class.isAssignableFrom(returnType)) {
+			return ((BuffDocument)((DocumentView)value).document()).root;
+		}
+
+		return returnType.cast(value);
 	}
 	
 	private static final Object handleDefaultMethod(Object proxy, Method method, Object [] args, Class<?> documentClass) throws Throwable {
@@ -287,5 +328,18 @@ public class BuffDocument implements Document {
 	@Override
 	public int hashCode() {
 		return root.hashCode();
+	}
+
+	@Override
+	public ByteBuffer asByteBuffer() {
+		return root.toByteBuffer();
+	}
+
+	@Override
+	public byte[] asBytes() {
+		ByteBuffer buf = asByteBuffer();
+		byte [] bytes = new byte[buf.limit()];
+		buf.get(bytes,0,buf.limit());
+		return bytes;
 	}
 }
