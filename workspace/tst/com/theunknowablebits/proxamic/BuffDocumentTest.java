@@ -143,6 +143,24 @@ class BuffDocumentTest {
 			}
 			
 			@Test
+			@DisplayName("unrecognized methods")
+			void unrecognizedMethod() {
+				assertThrows(RuntimeException.class,() -> {
+					record.unrecognizedMethod();
+				}, "No path to invoke for unrecognizedMethod");
+			}
+
+			@Test
+			@DisplayName("default methods")
+			void defaultMethod() {
+				assertEquals
+				(
+						"Dana, Level 20 Software Engineer",
+						record.usingName("Dana").withLevel(20).characterClass("Software Engineer").sheetHeader()
+				);
+			}
+
+			@Test
 			@DisplayName("equals and hashcode")
 			void objectIdentity() {
 				CharacterRecord record2 = record.document().as(CharacterRecord.class);

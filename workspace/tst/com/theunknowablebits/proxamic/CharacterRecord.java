@@ -21,5 +21,13 @@ public interface CharacterRecord extends DocumentView {
 	public BigDecimal getAge();
 	public CharacterRecord setAge(BigDecimal age); // fluent mode
 	
+	@Getter("Class") public String characterClass();
+	@Setter("Class") public CharacterRecord characterClass(String className);
+	
+	public void unrecognizedMethod();
+	
+	default String sheetHeader() {
+		return name() + ", Level " + getLevel() + " " + characterClass();
+	}
 	
 }
