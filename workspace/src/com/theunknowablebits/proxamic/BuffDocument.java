@@ -43,8 +43,11 @@ public class BuffDocument implements Document {
 		this(new Struct());
 	}
 
-	@Override
 	public <T extends DocumentView> T newInstance(Class<T> documentClass) {
+		return create(documentClass);
+	}
+	
+	public static <T extends DocumentView> T create(Class<T> documentClass) {
 		return new BuffDocument(new Struct()).as(documentClass);
 	}
 
@@ -92,8 +95,6 @@ public class BuffDocument implements Document {
 				return BuffDocument.this;
 			}
 			if (methodName.equals("equals")) {
-				if (args.length!=1) 
-					return false;
 				if (args[0] instanceof DocumentView) 
 					return BuffDocument.this.equals(((DocumentView)args[0]).document());
 				return false;

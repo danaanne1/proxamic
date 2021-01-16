@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import com.theunknowablebits.buff.serialization.Record;
 
 @DisplayName("BuffDocument")
 class BuffDocumentTest {
@@ -36,11 +39,6 @@ class BuffDocumentTest {
 
 	@AfterEach
 	void tearDown() throws Exception {
-	}
-
-	@Test
-	void test() {
-		fail("Not yet implemented");
 	}
 
 	@Nested
@@ -83,4 +81,100 @@ class BuffDocumentTest {
 		}
 		
 	}
+	
+	@Nested
+	@DisplayName("document")
+	class BasicDocument {
+		BuffDocument document;
+		
+		@Test
+		@DisplayName("instantiate")
+		@BeforeEach
+		void init() {
+			document = new BuffDocument();
+		}
+		
+		@Test
+		@DisplayName("copy instantiate")
+		void initFromBytes() {
+			document = new BuffDocument(document.asByteBuffer());
+		}
+
+		@Nested
+		@DisplayName("document view")
+		class DocumentViews {
+			CharacterRecord record;
+			
+			@Test
+			@DisplayName("instantiation") 
+			@BeforeEach
+			void init () {
+				record = document.newInstance(CharacterRecord.class);
+			}
+			
+			@Test
+			@DisplayName("primitives and fluent behavior")
+			void getAndSetPrimitives() {
+				record.setName("Character Name");
+				assertEquals("Character Name",record.getName());
+				assertEquals("Character Name",record.name());
+				assertEquals("Character Name",record.name("Character Name2")); // annotated fluent non builder pattern
+				assertEquals(record,record.usingName("Character Name3")); // annotated fluent builder pattern
+				assertEquals("Character Name3",record.getName());
+				assertEquals("Character Name3",record.name());
+
+				record.setAge(BigDecimal.ONE);
+				assertEquals(BigDecimal.ONE, record.getAge());
+
+				record.setLevel(1);
+				assertEquals(1, record.getLevel());
+				
+				assertEquals(record,record.withLevel(2)); // fluent builder pattern
+				assertEquals(record,record.setAge(BigDecimal.TEN)); // fluent builder pattern
+				
+				assertEquals(BigDecimal.TEN, record.getAge());
+				assertEquals(2, record.getLevel());
+					
+			}
+
+			@Test
+			@DisplayName("ambiguous fluent return")
+			void ambiguousFluentReturn() {
+			}
+			
+			@Test
+			@DisplayName("equals and hashcode")
+			void objectIdentity() {
+				CharacterRecord record2 = record.document().as(CharacterRecord.class);
+				assertTrue(record2.equals(record));
+				assertFalse(record2.equals(null));
+				assertFalse(record2.equals(new Object()));
+				assertFalse(record2.equals(new Object[0]));
+				assertEquals(record2.hashCode(), record.hashCode());
+				CharacterRecord record3 = new BuffDocument(document.asByteBuffer()).as(CharacterRecord.class);
+				assertNotEquals(record3, record);
+				assertNotEquals(record3.hashCode(), record.hashCode());
+			}
+
+			@Test
+			@DisplayName("lists") 
+			void lists() {
+				
+			}
+			
+			@Test
+			@DisplayName("maps") 
+			void maps() {
+				
+			}
+			@Test
+			@DisplayName("arrays") 
+			void arrays() {
+				
+			}
+		}
+	}
+
+	
+
 }
