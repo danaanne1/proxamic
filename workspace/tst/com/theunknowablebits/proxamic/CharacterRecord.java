@@ -36,6 +36,7 @@ public interface CharacterRecord extends DocumentView {
 	@Setter("Abilities") public AbilityScore [] abilityScores(AbilityScore [] values);
 	
 	@Getter("Abilities") List<AbilityScore> abilityScoreList();
+	@SuppressWarnings("rawtypes")
 	@Getter("Abilities") List uncheckedAbilityScoreList();
 	
 	@Getter("AbilityMap") Map<String,AbilityScore> abilityScoreMap();
