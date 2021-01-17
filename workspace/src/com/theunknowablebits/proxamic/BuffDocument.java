@@ -67,9 +67,12 @@ public class BuffDocument implements Document {
 			this.documentClass = documentClass;
 		}
 		@Override
-		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+		public Object invoke(final Object proxy, final Method method, final Object[] args) throws Throwable {
 			if (method.isAnnotationPresent(Getter.class)) {
-				return convertFromStructValue(method.getGenericReturnType(), root.get(method.getAnnotation(Getter.class).value()));
+				return convertFromStructValue(
+								method.getGenericReturnType(), 
+								createIfRequired(method.getAnnotation(Getter.class).value(), method.getReturnType())
+						);
 			}
 			if (method.isAnnotationPresent(Setter.class)) {
 				return fluently
@@ -103,7 +106,11 @@ public class BuffDocument implements Document {
 				return BuffDocument.this.hashCode();
 			}
 			if (methodName.startsWith("get")) { 
-				return convertFromStructValue(method.getGenericReturnType(), root.get(methodName.substring(3)));
+				return convertFromStructValue
+						(
+								method.getGenericReturnType(), 
+								createIfRequired(methodName.substring(3),method.getReturnType())							
+						);
 			}
 			if (methodName.startsWith("set")) {
 				return fluently
@@ -127,6 +134,7 @@ public class BuffDocument implements Document {
 			}
 			throw new RuntimeException("No path to invoke for " + method.getName());
 		}
+		
 		private Object fluently(Object proxy, Method method, Object structValue) {
 			if ( (!method.getName().startsWith("with")) &&  method.getReturnType()==method.getParameterTypes()[0]) {
 				return convertFromStructValue( method.getGenericReturnType(), structValue );
@@ -135,13 +143,22 @@ public class BuffDocument implements Document {
 			}
 		}
 	
+		private Object createIfRequired(String fieldName, Class<?> returnType) {
+			if (!root.has(fieldName)) {
+				if (List.class.isAssignableFrom(returnType)) {
+					root.put(fieldName, new Array());
+				}
+				if (Map.class.isAssignableFrom(returnType) || DocumentView.class.isAssignableFrom(returnType)) {
+					root.put(fieldName, new Struct());
+				}
+			}
+			return root.get(fieldName);
+		}
 	}
 
 
 	@SuppressWarnings("unchecked")
 	private Object convertFromStructValue(Type methodReturnType, Object structValue) {
-		if (structValue == null) 
-			return null;
 		
 		Class<?> returnType = Object.class;
 		if (methodReturnType instanceof Class) 
@@ -157,21 +174,25 @@ public class BuffDocument implements Document {
 				return mapToList(((ParameterizedType)methodReturnType).getActualTypeArguments()[0], (Array)structValue);
 			return mapToList(Object.class,(Array)structValue);
 		}
-		
+
 		if (Map.class.isAssignableFrom(returnType)) {
 			if (methodReturnType instanceof ParameterizedType) 
 				return mapToMap(((ParameterizedType)methodReturnType).getActualTypeArguments()[1],(Struct)structValue);
 			return mapToMap(Object.class,(Struct)structValue);
 		}
-		
-		if (DocumentView.class.isAssignableFrom(returnType)) 
-			return new BuffDocument((Struct)structValue).as((Class<? extends DocumentView>) returnType);
 
+		if (DocumentView.class.isAssignableFrom(returnType)) { 
+			return new BuffDocument((Struct)structValue).as((Class<? extends DocumentView>) returnType);
+		}
+			
 		return returnType.cast(structValue);
 	}
 	
 	@SuppressWarnings("unchecked")
 	private <T> T[] mapToArray(Class<T> arrayType, Array array) {
+		if (array==null) {
+			return (T[])java.lang.reflect.Array.newInstance(arrayType,0);
+		}
 		T [] result = (T[])java.lang.reflect.Array.newInstance(arrayType, array.size());
 		for (int i = 0; i < array.size(); i++) {
 			result[i] = arrayType.cast(convertFromStructValue(arrayType, array.get(i)));

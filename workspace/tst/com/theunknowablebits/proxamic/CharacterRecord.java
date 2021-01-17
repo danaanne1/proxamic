@@ -1,6 +1,8 @@
 package com.theunknowablebits.proxamic;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
 /** A test class representing a character sheet from classic D&D */
 public interface CharacterRecord extends DocumentView {
@@ -30,4 +32,12 @@ public interface CharacterRecord extends DocumentView {
 		return name() + ", Level " + getLevel() + " " + characterClass();
 	}
 	
+	@Getter("Abilities") public AbilityScore [] abilityScores();
+	@Setter("Abilities") public AbilityScore [] abilityScores(AbilityScore [] values);
+	
+	@Getter("Abilities") List<AbilityScore> abilityScoreList();
+	@Getter("Abilities") List uncheckedAbilityScoreList();
+	
+	@Getter("AbilityMap") Map<String,AbilityScore> abilityScoreMap();
+		
 }

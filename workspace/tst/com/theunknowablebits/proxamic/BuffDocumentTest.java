@@ -174,20 +174,69 @@ class BuffDocumentTest {
 				assertNotEquals(record3.hashCode(), record.hashCode());
 			}
 
-			@Test
-			@DisplayName("lists") 
-			void lists() {
-				
+			private AbilityScore [] getAbilityScores() {
+				String [] names = { "Strength", "Intellligence", "Wisdom", "Dexterity", "Constitution", "Charisma" };
+				Integer [] values = { 12, 17, 14, 15, 12, 17 };
+				AbilityScore [] scores = new AbilityScore[6];
+				for (int i = 0; i < scores.length; i++) {
+					scores[i] = BuffDocument.create(AbilityScore.class)
+							.withName(names[i])
+							.withValue(values[i]);
+				}
+				return scores;
 			}
 			
 			@Test
-			@DisplayName("maps") 
-			void maps() {
-				
-			}
-			@Test
 			@DisplayName("arrays") 
 			void arrays() {
+				record.abilityScores(getAbilityScores());
+				record = new BuffDocument(record.document().asByteBuffer()).as(CharacterRecord.class);
+				AbilityScore [] scoresToCompare = getAbilityScores();
+				AbilityScore [] recordsScores = record.abilityScores();
+				assertEquals(scoresToCompare.length, recordsScores.length);
+				for (int i = 0; i < recordsScores.length; i++) {
+					assertEquals(scoresToCompare[i].name(),recordsScores[i].name());
+					assertEquals(scoresToCompare[i].value(),recordsScores[i].value());
+				}
+			}
+
+			@Test
+			@DisplayName("generic lists") 
+			void lists() {
+				AbilityScore [] scores = getAbilityScores();
+				assertEquals(0,record.abilityScoreList().size());
+				assertTrue(record.abilityScoreList().isEmpty());
+				record.abilityScoreList().add(scores[2]);
+				assertEquals(1,record.abilityScoreList().size());
+				assertFalse(record.abilityScoreList().isEmpty());
+				assertEquals("Wisdom",record.abilityScoreList().get(0).name());
+
+				record.abilityScoreList().clear();
+				assertEquals(0,record.abilityScoreList().size());
+				assertTrue(record.abilityScoreList().isEmpty());
+				
+			}
+			
+			@SuppressWarnings("unchecked")
+			@Test
+			@DisplayName("unchecked lists") 
+			void uncheckedLists() {
+				AbilityScore [] scores = getAbilityScores();
+				assertEquals(0,record.uncheckedAbilityScoreList().size());
+				assertTrue(record.uncheckedAbilityScoreList().isEmpty());
+				record.uncheckedAbilityScoreList().add(scores[2]);
+				assertEquals(1,record.uncheckedAbilityScoreList().size());
+				assertFalse(record.uncheckedAbilityScoreList().isEmpty());
+
+				record.uncheckedAbilityScoreList().clear();
+				assertEquals(0,record.uncheckedAbilityScoreList().size());
+				assertTrue(record.uncheckedAbilityScoreList().isEmpty());
+				
+			}
+
+			@Test
+			@DisplayName("maps") 
+			void maps() {
 				
 			}
 		}
