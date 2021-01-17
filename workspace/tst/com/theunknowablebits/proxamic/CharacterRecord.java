@@ -40,4 +40,7 @@ public interface CharacterRecord extends DocumentView {
 	
 	@Getter("AbilityMap") Map<String,AbilityScore> abilityScoreMap();
 		
+	public CharacterHistory getCharacterHistory();
+	
+	@Getter("InventoryItems") public Map<String,InventoryItem> inventoryItems();
 }

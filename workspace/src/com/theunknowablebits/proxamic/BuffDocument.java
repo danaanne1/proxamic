@@ -159,6 +159,9 @@ public class BuffDocument implements Document {
 
 	@SuppressWarnings("unchecked")
 	private Object convertFromStructValue(Type methodReturnType, Object structValue) {
+
+		if (structValue==null)
+			return null;
 		
 		Class<?> returnType = Object.class;
 		if (methodReturnType instanceof Class) 
@@ -191,7 +194,8 @@ public class BuffDocument implements Document {
 	@SuppressWarnings("unchecked")
 	private <T> T[] mapToArray(Class<T> arrayType, Array array) {
 		if (array==null) {
-			return (T[])java.lang.reflect.Array.newInstance(arrayType,0);
+			// return (T[])java.lang.reflect.Array.newInstance(arrayType,0);
+			return null;
 		}
 		T [] result = (T[])java.lang.reflect.Array.newInstance(arrayType, array.size());
 		for (int i = 0; i < array.size(); i++) {

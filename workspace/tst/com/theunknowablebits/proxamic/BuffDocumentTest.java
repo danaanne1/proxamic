@@ -1,6 +1,12 @@
 package com.theunknowablebits.proxamic;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -8,6 +14,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
@@ -17,8 +24,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import com.theunknowablebits.buff.serialization.Record;
 
 @DisplayName("BuffDocument")
 class BuffDocumentTest {
@@ -145,9 +150,12 @@ class BuffDocumentTest {
 			@Test
 			@DisplayName("unrecognized methods")
 			void unrecognizedMethod() {
-				assertThrows(RuntimeException.class,() -> {
-					record.unrecognizedMethod();
-				}, "No path to invoke for unrecognizedMethod");
+				assertThrows
+				(
+						RuntimeException.class,
+						() -> record.unrecognizedMethod(), 
+						"No path to invoke for unrecognizedMethod"
+				);
 			}
 
 			@Test
@@ -201,7 +209,7 @@ class BuffDocumentTest {
 			}
 
 			@Test
-			@DisplayName("generic lists") 
+			@DisplayName("typed lists") 
 			void lists() {
 				AbilityScore [] scores = getAbilityScores();
 				assertEquals(0,record.abilityScoreList().size());
@@ -214,6 +222,17 @@ class BuffDocumentTest {
 				record.abilityScoreList().clear();
 				assertEquals(0,record.abilityScoreList().size());
 				assertTrue(record.abilityScoreList().isEmpty());
+				
+				for (AbilityScore score: scores) {
+					record.abilityScoreList().add(score);
+				}
+				
+				for (int i = 0; i < scores.length; i++) {
+					assertEquals(scores[i], record.abilityScoreList().get(i));
+					record.abilityScoreList().set(i, null);
+					assertNull(record.abilityScoreList().get(i));
+				}
+
 				
 			}
 			
@@ -237,8 +256,35 @@ class BuffDocumentTest {
 			@Test
 			@DisplayName("maps") 
 			void maps() {
-				
+				assertTrue(record.inventoryItems().isEmpty());
+				record.inventoryItems().put("head", BuffDocument.create(InventoryItem.class).withName("Helm of Brilliance"));
+				record.inventoryItems().put("belt", BuffDocument.create(InventoryItem.class).withName("Girdle of Giant Strength"));
+				assertEquals(2,record.inventoryItems().size());
+				record.inventoryItems().remove("head");
+				assertEquals("Girdle of Giant Strength",record.inventoryItems().get("belt").name());
 			}
+
+			@Test
+			@DisplayName("reference types and serializable primitives") 
+			void referenceTypes() {
+				Date logDate = new Date();
+				record
+					.getCharacterHistory()
+					.records()
+					.add
+					(
+							BuffDocument
+								.create(CharacterHistoryRecord.class)
+								.withLogEntry("Character was created")
+								.withLogDate(logDate)
+					);
+				record = new BuffDocument(record.document().asByteBuffer()).as(CharacterRecord.class);
+				assertEquals(1,record.getCharacterHistory().records().size());
+				assertEquals("Character was created",record.getCharacterHistory().records().get(0).getLogEntry());
+				assertEquals(logDate,record.getCharacterHistory().records().get(0).getLogDate());
+			}
+
+
 		}
 	}
 
