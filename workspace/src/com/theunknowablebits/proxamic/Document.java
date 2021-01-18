@@ -5,13 +5,22 @@ import java.nio.ByteBuffer;
 /** All document classes implement this */
 public interface Document {
 
-	
-	<T extends DocumentView> T as(final Class<T> documentClass);
+	public <T extends DocumentView> T as(final Class<T> documentClass);
 
-	<T extends DocumentView> T newInstance(Class<T> documentClass);
+	public Document newInstance();
 
-	ByteBuffer asByteBuffer();
+	public Document newInstance(ByteBuffer data);
+
+	public default <T extends DocumentView> T newInstance(Class<T> viewClass) {
+		return newInstance().as(viewClass);
+	}
 	
-	byte [] asBytes();
+	public default <T extends DocumentView> T newInstance(Class<T> viewClass, ByteBuffer bytes) {
+		return newInstance(bytes).as(viewClass);
+	}
+
+	ByteBuffer toByteBuffer();
+	
+	byte [] toBytes();
 	
 }

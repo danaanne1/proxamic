@@ -35,22 +35,22 @@ public class BuffDocument implements Document {
 		this.root = root;
 	}
 
-	public BuffDocument(ByteBuffer buffer) {
+	protected BuffDocument(ByteBuffer buffer) {
 		this(new Struct(buffer));
 	}
 
-	public BuffDocument() {
+	protected BuffDocument() {
 		this(new Struct());
 	}
 
-	public <T extends DocumentView> T newInstance(Class<T> documentClass) {
-		return create(documentClass);
+	public Document newInstance() {
+		return new BuffDocument();
 	}
 	
-	public static <T extends DocumentView> T create(Class<T> documentClass) {
-		return new BuffDocument(new Struct()).as(documentClass);
+	public Document newInstance(ByteBuffer bytes) {
+		return new BuffDocument(bytes);
 	}
-
+	
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T extends DocumentView> T as(final Class<T> documentClass) {
@@ -357,13 +357,13 @@ public class BuffDocument implements Document {
 	}
 
 	@Override
-	public ByteBuffer asByteBuffer() {
+	public ByteBuffer toByteBuffer() {
 		return root.toByteBuffer();
 	}
 
 	@Override
-	public byte[] asBytes() {
-		ByteBuffer buf = asByteBuffer();
+	public byte[] toBytes() {
+		ByteBuffer buf = toByteBuffer();
 		byte [] bytes = new byte[buf.limit()];
 		buf.get(bytes,0,buf.limit());
 		return bytes;

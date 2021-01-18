@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -102,7 +103,7 @@ class BuffDocumentTest {
 		@Test
 		@DisplayName("copy instantiate")
 		void initFromBytes() {
-			document = new BuffDocument(document.asByteBuffer());
+			document = new BuffDocument(document.toByteBuffer());
 		}
 
 		@Nested
@@ -158,8 +159,8 @@ class BuffDocumentTest {
 				);
 			}
 
-			@Test
 			@DisplayName("default methods")
+			@Test
 			void defaultMethod() {
 				assertEquals
 				(
@@ -177,7 +178,7 @@ class BuffDocumentTest {
 				assertFalse(record2.equals(new Object()));
 				assertFalse(record2.equals(new Object[0]));
 				assertEquals(record2.hashCode(), record.hashCode());
-				CharacterRecord record3 = new BuffDocument(document.asByteBuffer()).as(CharacterRecord.class);
+				CharacterRecord record3 = new BuffDocument(document.toByteBuffer()).as(CharacterRecord.class);
 				assertNotEquals(record3, record);
 				assertNotEquals(record3.hashCode(), record.hashCode());
 			}
@@ -187,7 +188,7 @@ class BuffDocumentTest {
 				Integer [] values = { 12, 17, 14, 15, 12, 17 };
 				AbilityScore [] scores = new AbilityScore[6];
 				for (int i = 0; i < scores.length; i++) {
-					scores[i] = BuffDocument.create(AbilityScore.class)
+					scores[i] = document.newInstance(AbilityScore.class)
 							.withName(names[i])
 							.withValue(values[i]);
 				}
@@ -198,7 +199,7 @@ class BuffDocumentTest {
 			@DisplayName("arrays") 
 			void arrays() {
 				record.abilityScores(getAbilityScores());
-				record = new BuffDocument(record.document().asByteBuffer()).as(CharacterRecord.class);
+				record = new BuffDocument(record.document().toByteBuffer()).as(CharacterRecord.class);
 				AbilityScore [] scoresToCompare = getAbilityScores();
 				AbilityScore [] recordsScores = record.abilityScores();
 				assertEquals(scoresToCompare.length, recordsScores.length);
@@ -257,8 +258,8 @@ class BuffDocumentTest {
 			@DisplayName("maps") 
 			void maps() {
 				assertTrue(record.inventoryItems().isEmpty());
-				record.inventoryItems().put("head", BuffDocument.create(InventoryItem.class).withName("Helm of Brilliance"));
-				record.inventoryItems().put("belt", BuffDocument.create(InventoryItem.class).withName("Girdle of Giant Strength"));
+				record.inventoryItems().put("head", document.newInstance(InventoryItem.class).withName("Helm of Brilliance"));
+				record.inventoryItems().put("belt", document.newInstance(InventoryItem.class).withName("Girdle of Giant Strength"));
 				assertEquals(2,record.inventoryItems().size());
 				record.inventoryItems().remove("head");
 				assertEquals("Girdle of Giant Strength",record.inventoryItems().get("belt").name());
@@ -273,12 +274,12 @@ class BuffDocumentTest {
 					.records()
 					.add
 					(
-							BuffDocument
-								.create(CharacterHistoryRecord.class)
+							document
+								.newInstance(CharacterHistoryRecord.class)
 								.withLogEntry("Character was created")
 								.withLogDate(logDate)
 					);
-				record = new BuffDocument(record.document().asByteBuffer()).as(CharacterRecord.class);
+				record = new BuffDocument(record.document().toByteBuffer()).as(CharacterRecord.class);
 				assertEquals(1,record.getCharacterHistory().records().size());
 				assertEquals("Character was created",record.getCharacterHistory().records().get(0).getLogEntry());
 				assertEquals(logDate,record.getCharacterHistory().records().get(0).getLogDate());
