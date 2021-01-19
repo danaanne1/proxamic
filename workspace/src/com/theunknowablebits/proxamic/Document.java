@@ -9,14 +9,8 @@ public interface Document {
 
 	public Document newInstance();
 
-	public Document newInstance(ByteBuffer data);
-
 	public default <T extends DocumentView> T newInstance(Class<T> viewClass) {
 		return newInstance().as(viewClass);
-	}
-	
-	public default <T extends DocumentView> T newInstance(Class<T> viewClass, ByteBuffer bytes) {
-		return newInstance(bytes).as(viewClass);
 	}
 
 	ByteBuffer toByteBuffer();

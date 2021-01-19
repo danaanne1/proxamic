@@ -27,10 +27,14 @@ import com.theunknowablebits.buff.serialization.Struct;
  * @author Dana
  *
  */
-public class BuffDocument implements Document {
+public class BuffDocument implements Document, DocumentStoreAware {
+
+	private static final DocumentStore defaultDocStore = new InMemoryDocumentStore();	
 
 	public Struct root;
-
+	
+	private DocumentStore docStore = defaultDocStore;
+	
 	private BuffDocument(Struct root) {
 		this.root = root;
 	}
@@ -44,11 +48,7 @@ public class BuffDocument implements Document {
 	}
 
 	public Document newInstance() {
-		return new BuffDocument();
-	}
-	
-	public Document newInstance(ByteBuffer bytes) {
-		return new BuffDocument(bytes);
+		return docStore.newInstance();
 	}
 	
 	@Override
@@ -60,6 +60,16 @@ public class BuffDocument implements Document {
 				new BuffHandler(documentClass));
 	}
 
+	@Override
+	public void setDocumentStore(DocumentStore docStore) {
+		this.docStore = docStore;
+	}
+	
+	@Override
+	public DocumentStore getDocumentStore() {
+		return this.docStore;
+	}
+	
 	private class BuffHandler implements InvocationHandler {
 		Class<? extends DocumentView> documentClass;
 

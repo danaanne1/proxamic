@@ -5,28 +5,16 @@ package com.theunknowablebits.proxamic;
  */
 public interface DocumentStore {
 
-	public Document create();
+	public String getID(Document document);
+	
+	public Document newInstance();
 
-	public Document retrieve(String key);
+	public Document newInstance(String key);
 
-	public void update(Document document);
+	public Document get(String key);
+
+	public void put(Document document);
 
 	public void delete(Document document);
 
-	public default <T extends DocumentView> T create(Class <T> documentClass) {
-		return create().as(documentClass);
-	}
-
-	public default <T extends DocumentView> T retrieve(Class<T> documentClass, String key) {
-		return retrieve(key).as(documentClass);
-	}
-
-	public default <T extends DocumentView> void update(T documentView) {
-		update(documentView.document());
-	}
-	
-	public default <T extends DocumentView> void delete(T documentView) {
-		delete(documentView.document());
-	}
-	
 }
