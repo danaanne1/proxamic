@@ -52,9 +52,9 @@ public abstract class AbstractDocumentStore implements DocumentStore {
 
 	@Override
 	public void execute(Consumer<DocumentStore> execution) {
-		//new DocumentStoreExecutor(this).execute(transaction);
+		CachingDocumentStore cache = new CachingDocumentStore(this);
+		execution.accept(cache);
 	}
-
 
 	private static final class DocumentStoreTransactor implements DocumentStore {
 		DocumentStore delegate;
@@ -139,4 +139,78 @@ public abstract class AbstractDocumentStore implements DocumentStore {
 		}
 	}
 
+	private static final class CachingDocumentStore implements DocumentStore {
+		DocumentStore delegate;
+
+		HashMap<String, Document> documentsById = new HashMap<>(); 
+		
+		public CachingDocumentStore(DocumentStore delegate) {
+			this.delegate = delegate;
+		}
+		
+		private Document mappingDocStore(Document document) {
+			if (document instanceof DocumentStoreAware) {
+				((DocumentStoreAware)document).setDocumentStore(this);
+			}
+			return document;
+		}
+		
+		@Override
+		public String getID(Document document) { return delegate.getID(document); }
+
+		@Override
+		public Document newInstance() { return mappingDocStore(delegate.newInstance()); }
+
+		@Override
+		public Document newInstance(String key) { return mappingDocStore(delegate.newInstance(key)); }
+
+		@Override
+		public Document get(String key) {
+			if (!documentsById.containsKey(key))
+				documentsById.put(key,mappingDocStore(delegate.lock(key)));
+			return documentsById.get(key);
+		}
+
+		@Override
+		public synchronized void put(Document document) {
+			delegate.put(document);
+			documentsById.put(getID(document), mappingDocStore(document));
+		}
+
+		@Override
+		public synchronized void delete(Document document) {
+			delegate.delete(document);
+			documentsById.remove(getID(document));
+		}
+
+		@Override
+		public void transact(Consumer<DocumentStore> transaction) {
+			DocumentStoreTransactor transactor = new DocumentStoreTransactor(this);
+			boolean success = false;
+			try {
+				transaction.accept(transactor);
+				success = true;
+			} finally {
+				if (success)
+					transactor.commit();
+				else
+					transactor.rollback();
+			}
+		}
+
+		@Override
+		public void execute(Consumer<DocumentStore> execution) {
+			execution.accept(this);
+		}
+		@Override
+		public synchronized Document lock(String key) {
+			if (!documentsById.containsKey(key))
+				documentsById.put(key,mappingDocStore(delegate.lock(key)));
+			return documentsById.get(key);
+		}
+		@Override
+		public void release(Document document) {
+			delegate.release(document);
+		}
+	}
 }
