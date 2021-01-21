@@ -50,6 +50,17 @@ public abstract class AbstractDocumentStore implements DocumentStore {
 		}
 	}
 
+	public final Document withDocStore(Document document) {
+		return withDocStore(document,this);
+	}
+	
+	public static final Document withDocStore(Document document, DocumentStore store) {
+		if (document instanceof DocumentStoreAware) {
+			((DocumentStoreAware)document).setDocumentStore(store);
+		}
+		return document;
+	}
+
 	@Override
 	public void execute(Consumer<DocumentStore> execution) {
 		CachingDocumentStore cache = new CachingDocumentStore(this);
@@ -67,21 +78,14 @@ public abstract class AbstractDocumentStore implements DocumentStore {
 			this.delegate = delegate;
 		}
 		
-		private Document mappingDocStore(Document document) {
-			if (document instanceof DocumentStoreAware) {
-				((DocumentStoreAware)document).setDocumentStore(this);
-			}
-			return document;
-		}
-		
 		@Override
 		public String getID(Document document) { return delegate.getID(document); }
 
 		@Override
-		public Document newInstance() { return mappingDocStore(delegate.newInstance()); }
+		public Document newInstance() { return withDocStore(delegate.newInstance(),this); }
 
 		@Override
-		public Document newInstance(String key) { return mappingDocStore(delegate.newInstance(key)); }
+		public Document newInstance(String key) { return withDocStore(delegate.newInstance(key),this); }
 
 		@Override
 		public Document get(String key) {
@@ -102,13 +106,11 @@ public abstract class AbstractDocumentStore implements DocumentStore {
 
 		@Override
 		public void transact(Consumer<DocumentStore> transaction) {
-			//  simple passthrough at this point
 			transaction.accept(this);
 		}
 
 		@Override
 		public void execute(Consumer<DocumentStore> execution) {
-			// executions inside a transaction are still transactions
 			execution.accept(this);
 		}
 		@Override
@@ -118,7 +120,7 @@ public abstract class AbstractDocumentStore implements DocumentStore {
 			if (toPut.containsKey(key)) 
 				return toPut.get(key);
 			if (!documentsById.containsKey(key))
-				documentsById.put(key,mappingDocStore(delegate.lock(key)));
+				documentsById.put(key, withDocStore(delegate.lock(key),this));
 			return documentsById.get(key);
 		}
 		@Override
@@ -148,33 +150,27 @@ public abstract class AbstractDocumentStore implements DocumentStore {
 			this.delegate = delegate;
 		}
 		
-		private Document mappingDocStore(Document document) {
-			if (document instanceof DocumentStoreAware) {
-				((DocumentStoreAware)document).setDocumentStore(this);
-			}
-			return document;
-		}
 		
 		@Override
 		public String getID(Document document) { return delegate.getID(document); }
 
 		@Override
-		public Document newInstance() { return mappingDocStore(delegate.newInstance()); }
+		public Document newInstance() { return withDocStore(delegate.newInstance(),this); }
 
 		@Override
-		public Document newInstance(String key) { return mappingDocStore(delegate.newInstance(key)); }
+		public Document newInstance(String key) { return withDocStore(delegate.newInstance(key),this); }
 
 		@Override
 		public Document get(String key) {
 			if (!documentsById.containsKey(key))
-				documentsById.put(key,mappingDocStore(delegate.lock(key)));
+				documentsById.put(key, withDocStore(delegate.lock(key), this));
 			return documentsById.get(key);
 		}
 
 		@Override
 		public synchronized void put(Document document) {
 			delegate.put(document);
-			documentsById.put(getID(document), mappingDocStore(document));
+			documentsById.put(getID(document), withDocStore(document, this));
 		}
 
 		@Override
@@ -205,7 +201,7 @@ public abstract class AbstractDocumentStore implements DocumentStore {
 		@Override
 		public synchronized Document lock(String key) {
 			if (!documentsById.containsKey(key))
-				documentsById.put(key,mappingDocStore(delegate.lock(key)));
+				documentsById.put(key, withDocStore(delegate.lock(key),this));
 			return documentsById.get(key);
 		}
 		@Override
