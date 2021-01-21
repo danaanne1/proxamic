@@ -1,8 +1,12 @@
-package com.theunknowablebits.proxamic;
+package com.theunknowablebits.proxamic.data;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+
+import com.theunknowablebits.proxamic.DocumentView;
+import com.theunknowablebits.proxamic.Getter;
+import com.theunknowablebits.proxamic.Setter;
 
 /** A test class representing a character sheet from classic D&D */
 public interface CharacterRecord extends DocumentView {

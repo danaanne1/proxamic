@@ -1,6 +1,8 @@
-package com.theunknowablebits.proxamic;
+package com.theunknowablebits.proxamic.data;
 
 import java.util.Date;
+
+import com.theunknowablebits.proxamic.DocumentView;
 
 public interface CharacterHistoryRecord extends DocumentView {
 
