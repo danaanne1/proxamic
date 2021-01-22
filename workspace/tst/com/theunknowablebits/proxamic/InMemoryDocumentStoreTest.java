@@ -54,17 +54,38 @@ class InMemoryDocumentStoreTest {
 		@Test
 		@DisplayName("crud") 
 		void testCrud() {
+			// create an instance via get (over missing)
 			CharacterRecord otherRecord = docStore.get(CharacterRecord.class, "danas character");
+
+			// create an instance via new instance
 			CharacterRecord characterRecord = docStore.newInstance("danas character").as(CharacterRecord.class);
+
+			// put the new instance, creating an actual record.
 			docStore.put(characterRecord.usingName("Dananator").characterClass("SoftwareEngineer").withLevel(25));
+
+			// obtain the inserted object
 			CharacterRecord retrieved = docStore.get(CharacterRecord.class,"danas character");
-			assertEquals("Dananator",retrieved.name());
+
+			// the retrieved object should actually have gone over the byte bridge
+			assertEquals("Dananator", retrieved.name() );
+
+			// get should always return a copy
 			assertNotSame(characterRecord, retrieved);
-			assertThrows(ConcurrentModificationException.class, () -> docStore.put(docStore.newInstance(CharacterRecord.class,"danas character")));
-			assertThrows(ConcurrentModificationException.class, () -> docStore.put(otherRecord));
+			
+			// should not be able to insert a new record over an existing one
+			assertThrows( ConcurrentModificationException.class, () -> docStore.put(docStore.newInstance(CharacterRecord.class,"danas character")) );
+			
+			// out of order delete
+			assertThrows( ConcurrentModificationException.class, () -> docStore.delete(otherRecord) ); 
+
+			// in order delete
 			docStore.delete(characterRecord);
-			assertThrows(ConcurrentModificationException.class, () -> docStore.put(characterRecord));
-			docStore.put(otherRecord);
+
+			// character record is still assigned a version (even after delete) and should not be insertable as new:
+			assertThrows( ConcurrentModificationException.class, () -> docStore.put(characterRecord) );
+			
+			// this record is still new, and should be insertable now
+			docStore.put(otherRecord);  
 		}
 		
 		@Test
