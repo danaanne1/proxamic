@@ -104,7 +104,7 @@ public class InMemoryDocumentStore extends AbstractDocumentStore implements Docu
 	@Override
 	public Document lock(String key) {
 		Record storageRecord = recordsById.get(key);
-		synchronized ( storageRecord.documentId==null?key:storageRecord.documentId ) {
+		synchronized ( storageRecord==null?key:storageRecord.documentId ) {
 			// just in case, always get the latest copy after we enter the sync block:
 			storageRecord = recordsById.get(key); 
 
@@ -137,7 +137,7 @@ public class InMemoryDocumentStore extends AbstractDocumentStore implements Docu
 		synchronized (documentsRecord.documentId) {
 			Record storageRecord = recordsById.get(documentsRecord.documentId); // just in case, always get the latest copy
 
-			assertLockHolder(documentsRecord,documentsRecord);
+			assertLockHolder(documentsRecord, storageRecord);
 
 			storageRecord.lockedUntil = 0;
 		}

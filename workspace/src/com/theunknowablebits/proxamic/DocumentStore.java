@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 public interface DocumentStore {
 
 	public String getID(Document document);
-	
+
 	public Document newInstance();
 
 	public Document newInstance(String key);
@@ -22,6 +22,24 @@ public interface DocumentStore {
 	public void put(Document document);
 
 	public void delete(Document document);
+
+	// Syntactic sugar methods:
+
+	public default <T extends DocumentView> String getID(T documentView) { return getID(documentView.document()); }
+	
+	public default <T extends DocumentView> T newInstance(Class<T> viewClass) { return newInstance().as(viewClass); }
+
+	public default <T extends DocumentView> T newInstance(Class<T> viewClass, String key) { return newInstance(key).as(viewClass); }
+
+	public default <T extends DocumentView> T get(Class<T> viewClass, String key) { return get(key).as(viewClass); }
+
+	public default <T extends DocumentView> T lock(Class<T> viewClass, String key) { return lock(key).as(viewClass); }
+
+	public default <T extends DocumentView> void release(T documentView) { release(documentView.document()); }
+
+	public default <T extends DocumentView> void put(T documentView) { put(documentView.document()); }
+
+	public default <T extends DocumentView> void delete(T documentView) { delete(documentView.document()); }
 
 	/** 
 	 * Runs an execution as a transaction. The transaction will either succeed or throw an exception.

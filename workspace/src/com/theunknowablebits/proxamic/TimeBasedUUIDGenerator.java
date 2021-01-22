@@ -62,7 +62,7 @@ public class TimeBasedUUIDGenerator
 	}
 
 	// 48 bits (6 bytes)
-	private static long getNodeMacAddr()  
+	public static long getNodeMacAddr()  
 	{
 		long networkAddr = 0l;
 		byte [] b = new byte[6];
