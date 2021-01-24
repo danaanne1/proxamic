@@ -45,7 +45,7 @@ public interface DocumentStore {
 	 * Runs an execution as a transaction. The transaction will either succeed or throw an exception.
 	 * @param transaction
 	 */
-	public default void transact(Consumer<DocumentStore> transactor) { new DocumentStoreTransactor(this).accept(transactor); }
+	public default void transact(Consumer<DocumentStore> transactor) { new TransactingDocumentStore(this).accept(transactor); }
 
 	/** 
 	 * Runs a scoped execution similar to a transaction but without transactional semantics. This is useful for queries that require 

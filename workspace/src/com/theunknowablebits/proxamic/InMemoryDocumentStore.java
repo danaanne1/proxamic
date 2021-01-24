@@ -147,8 +147,10 @@ public class InMemoryDocumentStore extends AbstractDocumentStore implements Docu
 		if ( 
 				( storageRecord != null )
 				&& ( storageRecord.lockedUntil > System.currentTimeMillis() )
-				&& ( documentsRecord != null )
-				&& ( storageRecord.lockId != documentsRecord.lockId )  // SIC: equivalence not equals plz
+				&& ( 
+						( documentsRecord == null )
+						|| ( storageRecord.lockId != documentsRecord.lockId ) // SIC: equivalence not equals plz
+				) 
 		) {
 			throw new ConcurrentModificationException("Not the lock holder.");
 		}

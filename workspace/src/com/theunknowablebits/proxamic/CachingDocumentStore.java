@@ -43,7 +43,7 @@ final class CachingDocumentStore implements DocumentStore, Consumer<Consumer<Doc
 
 	@Override
 	public void transact(Consumer<DocumentStore> transaction) {
-		DocumentStoreTransactor transactor = new DocumentStoreTransactor(this);
+		TransactingDocumentStore transactor = new TransactingDocumentStore(this);
 		boolean success = false;
 		try {
 			transaction.accept(transactor);
