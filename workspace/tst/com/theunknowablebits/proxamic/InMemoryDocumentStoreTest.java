@@ -157,9 +157,11 @@ class InMemoryDocumentStoreTest {
 
 			docStore.transact((docStore)->{
 				CharacterRecord beforeUpdate = docStore.get(CharacterRecord.class, "danas character");
+
+				// not a member:
+				assertThrows(IllegalArgumentException.class, () -> docStore.put(characterRecord));
 				
 				docStore.put(beforeUpdate.usingName("Dananator").characterClass("SDE 3").withLevel(25));
-
 				docStore.put(docStore.get(CharacterRecord.class, "danas character").withLevel(27));
 				
 				// get returns the put item
@@ -169,9 +171,8 @@ class InMemoryDocumentStoreTest {
 				assertNotSame(beforeUpdate, docStore.get(CharacterRecord.class, "danas character"));
 				assertSame(beforeUpdate.document(), docStore.get(CharacterRecord.class, "danas character").document());
 				
-				// get after delete returns a new instance
+				// get after delete succeeds with a new instance
 				docStore.delete(beforeUpdate);
-				
 				assertNull(docStore.get(CharacterRecord.class, "danas character").name());
 				
 			});
