@@ -125,9 +125,11 @@ public class BuffDocument implements Document, DocumentStoreAware {
 	}
 	
 	private class BuffHandler implements InvocationHandler, Serializable {
+		private static final long serialVersionUID = 1L;
 		Class<? extends DocumentView> documentClass;
 		
 		// visible for serialization
+		@SuppressWarnings("unused")
 		protected BuffHandler() {
 			
 		}
