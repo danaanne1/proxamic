@@ -176,6 +176,13 @@ public class BuffDocument implements Document, DocumentStoreAware {
 			if (methodName.equals("hashCode")) {
 				return BuffDocument.this.hashCode();
 			}
+			if (DocumentStoreAware.class.isAssignableFrom(documentClass) && methodName.equals("getDocumentStore")) { 
+				return BuffDocument.this.getDocumentStore();
+			}
+			if (DocumentStoreAware.class.isAssignableFrom(documentClass) && methodName.equals("setDocumentStore")) { 
+				BuffDocument.this.setDocumentStore((DocumentStore)args[0]);
+				return null;
+			}
 			if (methodName.startsWith("get")) { 
 				return convertFromStructValue
 						(
@@ -415,11 +422,17 @@ public class BuffDocument implements Document, DocumentStoreAware {
 				.invokeWithArguments(args);
 	}
 	
+	/**
+	 * A document only equals another when the underlying root object is the same. If canonicalization is a goal, use Execute or CachingDocumentStore.
+	 */
 	@Override
 	public boolean equals(Object obj) {
-		return super.equals(obj) ||
-				( BuffDocument.class.isAssignableFrom(obj.getClass()) && 
-						root.equals(((BuffDocument)obj).root));
+		return 
+			super.equals(obj) ||
+			( 
+				BuffDocument.class.isAssignableFrom(obj.getClass()) && 
+				root == ((BuffDocument)obj).root
+			);
 	}
 	
 	@Override

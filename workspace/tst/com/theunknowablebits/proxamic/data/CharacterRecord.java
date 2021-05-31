@@ -4,12 +4,13 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
+import com.theunknowablebits.proxamic.DocumentStoreAware;
 import com.theunknowablebits.proxamic.DocumentView;
 import com.theunknowablebits.proxamic.Getter;
 import com.theunknowablebits.proxamic.Setter;
 
 /** A test class representing a character sheet from classic D&D */
-public interface CharacterRecord extends DocumentView {
+public interface CharacterRecord extends DocumentView, DocumentStoreAware {
 
 	@Getter("Name") public String name();
 	@Setter("Name") public String name(String value); // annotated with fluent non builder return

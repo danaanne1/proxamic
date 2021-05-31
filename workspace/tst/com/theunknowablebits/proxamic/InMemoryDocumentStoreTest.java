@@ -2,6 +2,12 @@ package com.theunknowablebits.proxamic;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ConcurrentModificationException;
 
 import org.junit.jupiter.api.AfterAll;
@@ -130,6 +136,99 @@ class InMemoryDocumentStoreTest {
 		
 	}
 
+	public static class DelegateDocumentStore implements DocumentStore, Serializable {
+		private static final long serialVersionUID = 1L;
+		private static final DocumentStore delegate = new InMemoryDocumentStore();
+		
+		public DelegateDocumentStore() {
+		}
+
+		public String getID(Document document) {
+			return delegate.getID(document);
+		}
+
+		public Document withRemappedDocStore(Document d) {
+			if (d instanceof DocumentStoreAware)
+				((DocumentStoreAware)d).setDocumentStore(this);
+			return d;
+		}
+		
+		public Document newInstance() {
+			return withRemappedDocStore(delegate.newInstance());
+		}
+
+		public Document newInstance(String key) {
+			return withRemappedDocStore(delegate.newInstance(key));
+		}
+
+		public Document get(String key) {
+			return withRemappedDocStore(delegate.get(key));
+		}
+
+		public Document lock(String key) {
+			return withRemappedDocStore(delegate.lock(key));
+		}
+
+		public void release(Document document) {
+			delegate.release(document);
+		}
+
+		public void put(Document document) {
+			delegate.put(document);
+		}
+
+		public void delete(Document document) {
+			delegate.delete(document);
+		}
+
+	}
+	
+	
+	@Nested
+	@DisplayName("serialization")
+	class Serialization {
+		private DelegateDocumentStore delegateDocStore;
+		
+		@BeforeEach
+		public void setup() {
+			delegateDocStore = new DelegateDocumentStore();
+		}
+		
+		@Test
+		@DisplayName("document view")
+		public void document() throws ClassNotFoundException, IOException {
+			CharacterRecord record = delegateDocStore.newInstance(CharacterRecord.class);
+			record.setName("bob");
+			delegateDocStore.put(record);
+
+			CharacterRecord newRecord = serialized(record);
+			assertArrayEquals(record.document().toBytes(), newRecord.document().toBytes());
+			assertEquals(delegateDocStore.getID(record),delegateDocStore.getID(newRecord));
+		}
+		
+		@SuppressWarnings("unchecked")
+		private <T> T serialized(T record) throws IOException, ClassNotFoundException 
+		{
+			try (
+					ByteArrayOutputStream bout = new ByteArrayOutputStream();
+					ObjectOutputStream oout = new ObjectOutputStream(bout) )
+			{
+				oout.writeObject(record);
+				oout.close();
+				bout.close();
+				try (
+						ByteArrayInputStream bin = new ByteArrayInputStream(bout.toByteArray());
+						ObjectInputStream oin = new ObjectInputStream(bin))
+				{
+					return (T)oin.readObject();
+				}
+			}
+		}
+
+		
+	}
+	
+	
 	@Nested
 	@DisplayName("transactions") 
 	class Transactions {

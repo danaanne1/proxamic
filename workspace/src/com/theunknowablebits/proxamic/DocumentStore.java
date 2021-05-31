@@ -7,14 +7,41 @@ import java.util.function.Consumer;
  */
 public interface DocumentStore {
 
+	/**
+	 * Returns the id for a document.
+	 * 
+	 * @param document
+	 * @return
+	 */
 	public String getID(Document document);
 
+	/**
+	 * Creates a new instance of a document with a random id
+	 * @return
+	 */
 	public Document newInstance();
 
+	/**
+	 * Creates a new instance of a document with a known id.
+	 * Note that if a put is attempted and the key already exists this will likely result in an error.
+	 * @param key
+	 * @return 
+	 */
 	public Document newInstance(String key);
 
+	/**
+	 * Returns the document for the provided key, or a new instance (as if by calling newInstance(key)) if no document presently exists with that key
+	 * 
+	 * @param key
+	 * @return
+	 */
 	public Document get(String key);
 	
+	/**
+	 * Behaves exactly like get, except that the returned instance holds the documents lock. This method can fail if another instance holds the lock.
+	 * @param key
+	 * @return
+	 */
 	public Document lock(String key);
 	
 	public void release(Document document);

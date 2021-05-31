@@ -7,12 +7,18 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
 
@@ -20,6 +26,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -48,6 +55,24 @@ class BuffDocumentTest {
 
 	@AfterEach
 	void tearDown() throws Exception {
+	}
+
+	@SuppressWarnings("unchecked")
+	<T> T serialize(T record) throws IOException, ClassNotFoundException {
+		try (
+				ByteArrayOutputStream bout = new ByteArrayOutputStream();
+				ObjectOutputStream oout = new ObjectOutputStream(bout)) 
+		{
+			oout.writeObject(record);
+			oout.close();
+			bout.close();
+			try (
+					ByteArrayInputStream bin = new ByteArrayInputStream(bout.toByteArray());
+					ObjectInputStream oin = new ObjectInputStream(bin))
+			{
+				return (T)oin.readObject();
+			}
+		}
 	}
 
 	@Nested
@@ -90,8 +115,17 @@ class BuffDocumentTest {
 			assertTrue(bob instanceof DocumentView);
 		}
 		
+		@Test
+		@DisplayName("Puts to asCharBuffer instances dont move position of source buffer")
+		void byteOperationAssumption1() {
+			String s = new String("This is a string");
+			ByteBuffer b = ByteBuffer.allocate(s.length()*2);
+			b.asCharBuffer().put(s);
+			assertTrue(b.position()==0);
+		}
+		
 	}
-	
+
 	@Nested
 	@DisplayName("document")
 	class BasicDocument {
@@ -109,6 +143,13 @@ class BuffDocumentTest {
 		void initFromBytes() {
 			document = new BuffDocument(document.toByteBuffer());
 		}
+		
+		@Test
+		@DisplayName("serializes with nonserializable docstore")
+		void serialization1() throws IOException, ClassNotFoundException {
+			document = serialize(document);
+		}
+		
 
 		@Nested
 		@DisplayName("document view")
@@ -120,6 +161,14 @@ class BuffDocumentTest {
 			@BeforeEach
 			void init () {
 				record = document.newInstance(CharacterRecord.class);
+			}
+			
+			@Test
+			@DisplayName("serializes with non serializable docstore")
+			void serializes() throws IOException, ClassNotFoundException {
+				record.name("Dana");
+				record = serialize(record);
+				assertEquals("Dana",record.name());
 			}
 			
 			@Test
@@ -147,7 +196,8 @@ class BuffDocumentTest {
 					
 			}
 
-			@Test
+			@Disabled
+			@Test	
 			@DisplayName("ambiguous fluent return")
 			void ambiguousFluentReturn() {
 			}
