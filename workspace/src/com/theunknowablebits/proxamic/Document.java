@@ -1,9 +1,10 @@
 package com.theunknowablebits.proxamic;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 
 /** All document classes implement this */
-public interface Document {
+public interface Document extends Serializable {
 
 	public <T extends DocumentView> T as(final Class<T> documentClass);
 

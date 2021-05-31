@@ -1,5 +1,10 @@
 package com.theunknowablebits.proxamic;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.ObjectStreamException;
+import java.io.Serializable;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
@@ -29,11 +34,60 @@ import com.theunknowablebits.buff.serialization.Struct;
  */
 public class BuffDocument implements Document, DocumentStoreAware {
 
+	private static final long serialVersionUID = 1L;
+
 	private static final DocumentStore defaultDocStore = new InMemoryDocumentStore();	
 
-	public Struct root;
+	public transient Struct root;
 	
-	private DocumentStore docStore = defaultDocStore;
+	private transient DocumentStore docStore = defaultDocStore;
+	
+	
+	/**
+	 * If the document store is serializable (see network aware doc stores) then this will serialize the doc store
+	 * followed by the document id. It is the responsibility of the caller to save documents before serialization.
+	 * <p>
+	 * If the document store is not serializable, will serialize the document as a byte stream
+	 * <p>
+	 * @param out
+	 * @throws IOException
+	 */
+	private void writeObject(ObjectOutputStream out)
+			throws IOException 
+	{
+		out.defaultWriteObject();
+		if (docStore instanceof Serializable) {
+			out.writeObject(docStore);
+			out.writeObject(docStore.getID(this));
+			return;
+		}
+		out.writeObject(null);
+		out.writeObject(toBytes());
+	}
+
+	/** only used when restoring from a doc store style serialization */
+	private transient String resolveKey = null;
+
+	private void readObject(ObjectInputStream in)
+		     throws IOException, ClassNotFoundException
+	{
+		in.defaultReadObject();
+		DocumentStore store = (DocumentStore)in.readObject();
+		if (store != null) {
+			docStore = store;
+			resolveKey = (String)in.readObject();
+			return;
+		}
+		docStore = defaultDocStore;
+		root = new Struct(ByteBuffer.wrap((byte [])in.readObject()));
+	}
+
+	private Object readResolve() throws ObjectStreamException
+	{
+		if (resolveKey!=null)
+			return docStore.get(resolveKey);
+		return this;
+	}
 	
 	private BuffDocument(Struct root) {
 		this.root = root;
@@ -70,8 +124,13 @@ public class BuffDocument implements Document, DocumentStoreAware {
 		return this.docStore;
 	}
 	
-	private class BuffHandler implements InvocationHandler {
+	private class BuffHandler implements InvocationHandler, Serializable {
 		Class<? extends DocumentView> documentClass;
+		
+		// visible for serialization
+		protected BuffHandler() {
+			
+		}
 
 		public BuffHandler(Class<? extends DocumentView> documentClass) {
 			this.documentClass = documentClass;
