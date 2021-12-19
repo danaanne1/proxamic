@@ -36,7 +36,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 
 	private static final long serialVersionUID = 1L;
 
-	private static final DocumentStore defaultDocStore = new InMemoryDocumentStore();	
+	private static final DocumentStore defaultDocStore = new LocalDocumentStore();	
 
 	public transient Struct root;
 	

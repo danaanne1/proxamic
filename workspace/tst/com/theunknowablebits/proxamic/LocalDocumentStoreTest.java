@@ -21,10 +21,10 @@ import org.junit.jupiter.api.Test;
 import com.theunknowablebits.proxamic.exampledata.CharacterRecord;
 
 @DisplayName("InMemoryDocumentStore")
-class InMemoryDocumentStoreTest {
+class LocalDocumentStoreTest {
 
 	
-	InMemoryDocumentStore docStore; 
+	LocalDocumentStore docStore; 
 	
 	@BeforeAll
 	static void setUpBeforeClass() throws Exception {
@@ -38,7 +38,7 @@ class InMemoryDocumentStoreTest {
 	@Test
 	@DisplayName("instantiates")
 	void setUp() throws Exception {
-		docStore = new InMemoryDocumentStore();
+		docStore = new LocalDocumentStore();
 	}
 
 	@AfterEach
@@ -138,7 +138,7 @@ class InMemoryDocumentStoreTest {
 
 	public static class DelegateDocumentStore implements DocumentStore, Serializable {
 		private static final long serialVersionUID = 1L;
-		private static final DocumentStore delegate = new InMemoryDocumentStore();
+		private static final DocumentStore delegate = new LocalDocumentStore();
 		
 		public DelegateDocumentStore() {
 		}

@@ -9,7 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class InMemoryDocumentStore extends AbstractDocumentStore implements DocumentStore {
+/**
+ * An in memory document store suitable for use within the same VM.
+ * 
+ * @author Dana
+ */
+public class LocalDocumentStore extends AbstractDocumentStore implements DocumentStore {
 
 	private static class Record {
 		String documentId;
@@ -32,15 +37,15 @@ public class InMemoryDocumentStore extends AbstractDocumentStore implements Docu
 	Map<Document,Record> recordsByDocument = Collections.synchronizedMap(new WeakHashMap<>());
 	ConcurrentHashMap<String,Record> recordsById = new ConcurrentHashMap<String,Record>();
 	
-	public InMemoryDocumentStore(Supplier<Document> docFromNothing, Function<ByteBuffer, Document> docFromBytes, Supplier<String> idSupplier) {
+	public LocalDocumentStore(Supplier<Document> docFromNothing, Function<ByteBuffer, Document> docFromBytes, Supplier<String> idSupplier) {
 		super(docFromNothing, docFromBytes, idSupplier);
 	}
 
-	public InMemoryDocumentStore(Supplier<Document> docFromNothing, Function<ByteBuffer, Document> docFromBytes) {
+	public LocalDocumentStore(Supplier<Document> docFromNothing, Function<ByteBuffer, Document> docFromBytes) {
 		super(docFromNothing, docFromBytes);
 	}
 
-	public InMemoryDocumentStore() {
+	public LocalDocumentStore() {
 		super();
 	}
 	
