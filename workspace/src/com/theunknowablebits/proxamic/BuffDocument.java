@@ -210,6 +210,9 @@ public class BuffDocument implements Document, DocumentStoreAware {
 				root.put(methodName.substring(4), convertToStructValue(method.getGenericParameterTypes()[0], args[0]));
 				return proxy;
 			}
+			if (methodName.equals("toString")) {
+				return BuffDocument.this.toString();
+			}
 			throw new RuntimeException("No path to invoke for " + method.getName());
 		}
 		
