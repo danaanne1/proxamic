@@ -1,4 +1,4 @@
-package com.theunknowablebits.proxamic.data;
+package com.theunknowablebits.proxamic.exampledata;
 
 import java.util.Date;
 

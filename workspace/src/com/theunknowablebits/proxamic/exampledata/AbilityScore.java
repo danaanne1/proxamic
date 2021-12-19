@@ -1,4 +1,4 @@
-package com.theunknowablebits.proxamic.data;
+package com.theunknowablebits.proxamic.exampledata;
 
 import com.theunknowablebits.proxamic.DocumentView;
 import com.theunknowablebits.proxamic.Getter;

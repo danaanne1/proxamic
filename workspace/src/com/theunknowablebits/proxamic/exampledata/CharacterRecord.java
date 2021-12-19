@@ -1,4 +1,4 @@
-package com.theunknowablebits.proxamic.data;
+package com.theunknowablebits.proxamic.exampledata;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -9,7 +9,7 @@ import com.theunknowablebits.proxamic.DocumentView;
 import com.theunknowablebits.proxamic.Getter;
 import com.theunknowablebits.proxamic.Setter;
 
-/** A test class representing a character sheet from classic D&D */
+/** A test class representing a character sheet from typical roleplaying games */
 public interface CharacterRecord extends DocumentView, DocumentStoreAware {
 
 	@Getter("Name") public String name();

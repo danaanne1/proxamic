@@ -18,7 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.theunknowablebits.proxamic.data.CharacterRecord;
+import com.theunknowablebits.proxamic.exampledata.CharacterRecord;
 
 @DisplayName("InMemoryDocumentStore")
 class InMemoryDocumentStoreTest {
