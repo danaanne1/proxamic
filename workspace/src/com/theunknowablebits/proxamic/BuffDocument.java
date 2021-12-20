@@ -42,6 +42,10 @@ public class BuffDocument implements Document, DocumentStoreAware {
 	
 	private transient DocumentStore docStore = defaultDocStore;
 	
+	private interface Reference extends DocumentView {
+		@Getter("ID") String ID();
+		@Setter("ID") void ID(String value);
+	}
 	
 	/**
 	 * If the document store is serializable (see network aware doc stores) then this will serialize the doc store
@@ -142,7 +146,8 @@ public class BuffDocument implements Document, DocumentStoreAware {
 			if (method.isAnnotationPresent(Getter.class)) {
 				return convertFromStructValue(
 								method.getGenericReturnType(), 
-								createIfRequired(method.getAnnotation(Getter.class).value(), method.getReturnType())
+								createIfRequired(method.getAnnotation(Getter.class).value(), method.getReturnType()),
+								method.isAnnotationPresent(Indirect.class)
 						);
 			}
 			if (method.isAnnotationPresent(Setter.class)) {
@@ -156,7 +161,8 @@ public class BuffDocument implements Document, DocumentStoreAware {
 										convertToStructValue
 										(
 												method.getGenericParameterTypes()[0],
-												args[0]
+												args[0],
+												method.isAnnotationPresent(Indirect.class)
 										)
 								)
 							);
@@ -187,7 +193,8 @@ public class BuffDocument implements Document, DocumentStoreAware {
 				return convertFromStructValue
 						(
 								method.getGenericReturnType(), 
-								createIfRequired(methodName.substring(3),method.getReturnType())							
+								createIfRequired(methodName.substring(3),method.getReturnType()),
+								method.isAnnotationPresent(Indirect.class)
 						);
 			}
 			if (methodName.startsWith("set")) {
@@ -201,13 +208,14 @@ public class BuffDocument implements Document, DocumentStoreAware {
 										convertToStructValue
 										(
 												method.getGenericParameterTypes()[0], 
-												args[0]
+												args[0],
+												method.isAnnotationPresent(Indirect.class)
 										)
 								)
 						);
 			}
 			if (methodName.startsWith("with")) {
-				root.put(methodName.substring(4), convertToStructValue(method.getGenericParameterTypes()[0], args[0]));
+				root.put(methodName.substring(4), convertToStructValue(method.getGenericParameterTypes()[0], args[0], method.isAnnotationPresent(Indirect.class)));
 				return proxy;
 			}
 			if (methodName.equals("toString")) {
@@ -218,7 +226,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 		
 		private Object fluently(Object proxy, Method method, Object structValue) {
 			if ( (!method.getName().startsWith("with")) &&  method.getReturnType()==method.getParameterTypes()[0]) {
-				return convertFromStructValue( method.getGenericReturnType(), structValue );
+				return convertFromStructValue( method.getGenericReturnType(), structValue, method.isAnnotationPresent(Indirect.class) );
 			} else {
 				return proxy;
 			}
@@ -239,7 +247,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 
 
 	@SuppressWarnings("unchecked")
-	private Object convertFromStructValue(Type methodReturnType, Object structValue) {
+	private Object convertFromStructValue(Type methodReturnType, Object structValue, boolean indirect) {
 
 		if (structValue==null)
 			return null;
@@ -251,68 +259,75 @@ public class BuffDocument implements Document, DocumentStoreAware {
 			returnType = (Class<?>)((ParameterizedType)methodReturnType).getRawType();
 
 		if (returnType.isArray()) 
-			return mapToArray(returnType.getComponentType(),(Array)structValue);
+			return mapToArray(returnType.getComponentType(),(Array)structValue, indirect);
 
 		if (List.class.isAssignableFrom(returnType)) {
 			if (methodReturnType instanceof ParameterizedType) 
-				return mapToList(((ParameterizedType)methodReturnType).getActualTypeArguments()[0], (Array)structValue);
-			return mapToList(Object.class,(Array)structValue);
+				return mapToList(((ParameterizedType)methodReturnType).getActualTypeArguments()[0], (Array)structValue, indirect);
+			return mapToList(Object.class,(Array)structValue, false);
 		}
 
 		if (Map.class.isAssignableFrom(returnType)) {
 			if (methodReturnType instanceof ParameterizedType) 
-				return mapToMap(((ParameterizedType)methodReturnType).getActualTypeArguments()[1],(Struct)structValue);
-			return mapToMap(Object.class,(Struct)structValue);
+				return mapToMap(((ParameterizedType)methodReturnType).getActualTypeArguments()[1],(Struct)structValue, indirect);
+			return mapToMap(Object.class,(Struct)structValue, false);
 		}
 
 		if (DocumentView.class.isAssignableFrom(returnType)) { 
-			return new BuffDocument((Struct)structValue).as((Class<? extends DocumentView>) returnType);
+			DocumentView ob = new BuffDocument((Struct)structValue).as((Class<? extends DocumentView>) returnType);
+			if (indirect) {
+				String id = ob.document().as(Reference.class).ID();
+				if (id == null)
+					ob.document().as(Reference.class).ID(id=docStore.getID(docStore.newInstance()));
+				ob = docStore.get((Class<? extends DocumentView>) returnType, id);
+			}
+			return ob;
 		}
 			
 		return returnType.cast(structValue);
 	}
 	
 	@SuppressWarnings("unchecked")
-	private <T> T[] mapToArray(Class<T> arrayType, Array array) {
+	private <T> T[] mapToArray(Class<T> arrayType, Array array, boolean indirect) {
 		if (array==null) {
 			// return (T[])java.lang.reflect.Array.newInstance(arrayType,0);
 			return null;
 		}
 		T [] result = (T[])java.lang.reflect.Array.newInstance(arrayType, array.size());
 		for (int i = 0; i < array.size(); i++) {
-			result[i] = arrayType.cast(convertFromStructValue(arrayType, array.get(i)));
+			result[i] = arrayType.cast(convertFromStructValue(arrayType, array.get(i), indirect));
 		}
 		return result;
 	}
 
-	private <T> Array mapFromArray(Class<?> arrayType, Object [] value) {
+	private <T> Array mapFromArray(Class<?> arrayType, Object [] value, boolean indirect) {
 		Array result = new Array();
 		for (int i = 0; i < value.length; i++) {
-			result.add(convertToStructValue(arrayType, value[i]));
+			result.add(convertToStructValue(arrayType, value[i], indirect));
 		}
 		return result;
 	}
 	
-	private <B> List<B> mapToList(final Type elementClass, final Array array) {
+	private <B> List<B> mapToList(final Type elementClass, final Array array, boolean indirect) {
 		return new AbstractList<B>() {
 			@SuppressWarnings("unchecked")
 			@Override
 			public B set(int index, B element) {
-				return (B)convertFromStructValue(elementClass, array.set(index, convertToStructValue(elementClass, element)));
+				return (B)convertFromStructValue(elementClass, array.set(index, convertToStructValue(elementClass, element, indirect)), indirect);
 			}
 			@Override
 			public void add(int index, B element) {
-				array.add(index, convertToStructValue(elementClass, element));
+				array.add(index, convertToStructValue(elementClass, element, indirect));
 			}
 			@SuppressWarnings("unchecked")
 			@Override
 			public B remove(int index) {
-				return (B)convertFromStructValue(elementClass,array.remove(index));
+				return (B)convertFromStructValue(elementClass,array.remove(index), indirect);
 			}
 			@SuppressWarnings("unchecked")
 			@Override
 			public B get(int index) {
-				return (B)convertFromStructValue(elementClass, array.get(index));
+				return (B)convertFromStructValue(elementClass, array.get(index), indirect);
 			}
 			@Override
 			public int size() {
@@ -321,7 +336,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 		};
 	}
 
-	private <B> Map<String,B> mapToMap(final Type valueType, final Struct struct) {
+	private <B> Map<String,B> mapToMap(final Type valueType, final Struct struct, boolean indirect) {
 		return new AbstractMap<String, B>() {
 
 			@Override
@@ -342,7 +357,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 							@Override
 							public Entry<String, B> next() {
 								String key = delegate.next();
-								return new SimpleImmutableEntry<String, B>(key,(B) convertFromStructValue(valueType, struct.get(key)));
+								return new SimpleImmutableEntry<String, B>(key,(B) convertFromStructValue(valueType, struct.get(key), indirect));
 							}
 							
 							@Override
@@ -363,7 +378,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 			@SuppressWarnings("unchecked")
 			@Override
 			public B put(String key, B value) {
-				return (B) convertFromStructValue(valueType, struct.put(key, convertToStructValue(valueType, value)));
+				return (B) convertFromStructValue(valueType, struct.put(key, convertToStructValue(valueType, value, indirect)), indirect);
 			}
 		
 		};
@@ -375,7 +390,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 	 * @param value
 	 * @return 
 	 */
-	private Object convertToStructValue(Type declaredType, Object value) {
+	private Object convertToStructValue(Type declaredType, Object value, boolean indirect) {
 		
 		if (value == null) 
 			return null;
@@ -387,7 +402,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 			returnType = (Class<?>)((ParameterizedType)declaredType).getRawType();
 
 		if (returnType.isArray()) {
-			return mapFromArray(returnType.getComponentType(),(Object [])value);
+			return mapFromArray(returnType.getComponentType(),(Object [])value, indirect);
 		}
 
 		if (List.class.isAssignableFrom(returnType)) {
@@ -400,7 +415,13 @@ public class BuffDocument implements Document, DocumentStoreAware {
 		}
 		
 		if (DocumentView.class.isAssignableFrom(returnType)) {
-			return ((BuffDocument)((DocumentView)value).document()).root;
+			Object ob = ((BuffDocument)((DocumentView)value).document()).root;
+			if (indirect) {
+				Reference rDoc = docStore.newInstance(Reference.class);
+				rDoc.ID(docStore.getID((DocumentView)value));
+				ob = ((BuffDocument)(rDoc.document())).root;
+			}
+			return ob;
 		}
 
 		return returnType.cast(value);
