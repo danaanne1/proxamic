@@ -60,7 +60,15 @@ public class BuffDocument implements Document, DocumentStoreAware {
 			throws IOException 
 	{
 		out.defaultWriteObject();
-		if (docStore instanceof Serializable) {
+		if (Proxy.isProxyClass(docStore.getClass())) {
+			for (Class<?> c: docStore.getClass().getInterfaces()) {
+				if (Serializable.class.isAssignableFrom(c)) {
+					out.writeObject(docStore);
+					out.writeObject(docStore.getID(this));
+					return;
+				}
+			}
+		} else if (docStore instanceof Serializable) {
 			out.writeObject(docStore);
 			out.writeObject(docStore.getID(this));
 			return;
