@@ -282,6 +282,60 @@ class MemoryDocumentStoreTest {
 		}
 
 		@Test
+		@DisplayName("over indirects")
+		public void indirectExample() {
+			// create an instance via new instance
+			CharacterRecord characterRecord = 
+					docStore
+						.newInstance("CharacterRecord.Dana")
+						.as(CharacterRecord.class)
+						.usingName("Dananator")
+						.characterClass("Engineer")
+						.withLevel(50); // its vanilla people
+			docStore.put(characterRecord);
+			
+			docStore.transact((docStore)->{
+				
+				PlayerRecord playerRecord = 
+						docStore
+							.newInstance("Player.Dana")
+							.as(PlayerRecord.class)
+							.name("dana");
+
+				playerRecord.characters().add(docStore.get(CharacterRecord.class, "CharacterRecord.Dana"));
+				docStore.put(playerRecord);
+			});
+			
+			docStore.transact((docStore)->{
+				PlayerRecord rec = docStore.get(PlayerRecord.class, "Player.Dana");
+				CharacterRecord character  = rec.characters().get(0);
+				character.setLevel(60);
+				docStore.put(rec);
+			});
+
+			assertEquals(50, docStore.get(CharacterRecord.class,"CharacterRecord.Dana").getLevel());
+
+			docStore.transact((docStore)->{
+				PlayerRecord rec = docStore.get(PlayerRecord.class, "Player.Dana");
+				rec.characters().get(0).setLevel(65);
+				docStore.put(rec.characters().get(0)); // this test ensures cannonicalization works as expected across indirects
+				docStore.put(rec);
+			});
+
+			assertEquals(65, docStore.get(CharacterRecord.class,"CharacterRecord.Dana").getLevel());
+
+			docStore.transact((docStore)->{
+				PlayerRecord rec = docStore.get(PlayerRecord.class, "Player.Dana");
+				CharacterRecord character  = rec.characters().get(0);
+				character.setLevel(60);
+				docStore.put(character);
+			});
+			
+			assertEquals(60, docStore.get(CharacterRecord.class,"CharacterRecord.Dana").getLevel());
+			
+		}
+		
+		@Test
 		@DisplayName("operation ordering")
 		public void operationsOrdering() {
 			final CharacterRecord characterRecord = docStore.newInstance("danas character").as(CharacterRecord.class);
