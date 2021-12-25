@@ -43,8 +43,8 @@ public class BuffDocument implements Document, DocumentStoreAware {
 	private transient DocumentStore docStore = defaultDocStore;
 	
 	private interface Reference extends DocumentView {
-		@Getter("ID") String ID();
-		@Setter("ID") void ID(String value);
+		@Getter("__REF__") String ID();
+		@Setter("__REF__") void ID(String value);
 	}
 	
 	/**
@@ -69,6 +69,10 @@ public class BuffDocument implements Document, DocumentStoreAware {
 		out.writeObject(toBytes());
 	}
 
+	public String dump() {
+		return root.toString();
+	}
+	
 	/** only used when restoring from a doc store style serialization */
 	private transient String resolveKey = null;
 
@@ -126,6 +130,11 @@ public class BuffDocument implements Document, DocumentStoreAware {
 	@Override
 	public DocumentStore getDocumentStore() {
 		return this.docStore;
+	}
+	
+	@Override
+	public void remove(String field) {
+		root.keySet().remove(field);
 	}
 	
 	private class BuffHandler implements InvocationHandler, Serializable {
@@ -249,15 +258,18 @@ public class BuffDocument implements Document, DocumentStoreAware {
 	@SuppressWarnings("unchecked")
 	private Object convertFromStructValue(Type methodReturnType, Object structValue, boolean indirect) {
 
+		// pass nulls through
 		if (structValue==null)
 			return null;
 		
+		// get the parameterized conversion type
 		Class<?> returnType = Object.class;
 		if (methodReturnType instanceof Class) 
 			returnType = (Class<?>)methodReturnType;
 		if (methodReturnType instanceof ParameterizedType) 
 			returnType = (Class<?>)((ParameterizedType)methodReturnType).getRawType();
 
+		// if its a know collection type, we wrap:
 		if (returnType.isArray()) 
 			return mapToArray(returnType.getComponentType(),(Array)structValue, indirect);
 
@@ -273,6 +285,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 			return mapToMap(Object.class,(Struct)structValue, false);
 		}
 
+		// if its a document type, we unwrap (and possibly unpack)
 		if (DocumentView.class.isAssignableFrom(returnType)) { 
 			DocumentView ob = new BuffDocument((Struct)structValue).as((Class<? extends DocumentView>) returnType);
 			if (indirect) {
@@ -417,7 +430,7 @@ public class BuffDocument implements Document, DocumentStoreAware {
 		if (DocumentView.class.isAssignableFrom(returnType)) {
 			Object ob = ((BuffDocument)((DocumentView)value).document()).root;
 			if (indirect) {
-				Reference rDoc = docStore.newInstance(Reference.class);
+				Reference rDoc = new BuffDocument().as(Reference.class);
 				rDoc.ID(docStore.getID((DocumentView)value));
 				ob = ((BuffDocument)(rDoc.document())).root;
 			}

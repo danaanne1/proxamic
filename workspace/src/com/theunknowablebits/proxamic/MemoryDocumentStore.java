@@ -2,6 +2,7 @@ package com.theunknowablebits.proxamic;
 
 import java.nio.ByteBuffer;
 import java.util.ConcurrentModificationException;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -27,9 +28,22 @@ public class MemoryDocumentStore extends AbstractDocumentStore implements Docume
 		public Record(ByteBuffer document, long versionNumber) {
 			this(document, versionNumber, null);
 		}
+		public String toString() {
+			StringBuffer buffer = new StringBuffer(String.format("(Lock:%s, LockedUntil:%d, Version:%d)", lockId, lockedUntil, versionNumber));
+			buffer.append(new BuffDocument(document).dump());
+			return buffer.toString();
+		}
 	}
 
 	ConcurrentHashMap<String,Record> recordsById = new ConcurrentHashMap<String,Record>();
+	
+	
+	public void dump() {
+		for (Map.Entry<String,Record> me:recordsById.entrySet() ) {
+			System.out.println("========================" + me.getKey() + "========================" );
+			System.out.println(me.getValue().toString());
+		}
+	}
 	
 	public MemoryDocumentStore(Supplier<Document> docFromNothing, Function<ByteBuffer, Document> docFromBytes, Supplier<String> idSupplier) {
 		super(docFromNothing, docFromBytes, idSupplier);

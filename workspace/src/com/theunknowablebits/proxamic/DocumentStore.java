@@ -51,7 +51,7 @@ public interface DocumentStore {
 	public void delete(Document document);
 
 	// Syntactic sugar methods:
-
+	
 	public default <T extends DocumentView> String getID(T documentView) { return getID(documentView.document()); }
 	
 	public default <T extends DocumentView> T newInstance(Class<T> viewClass) { return newInstance().as(viewClass); }

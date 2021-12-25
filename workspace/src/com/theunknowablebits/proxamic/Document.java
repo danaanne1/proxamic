@@ -14,6 +14,8 @@ public interface Document extends Serializable {
 		return newInstance().as(viewClass);
 	}
 
+	public void remove(String fieldName);
+	
 	ByteBuffer toByteBuffer();
 	
 	byte [] toBytes();

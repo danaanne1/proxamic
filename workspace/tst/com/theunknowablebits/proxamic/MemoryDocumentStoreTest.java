@@ -19,12 +19,13 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.theunknowablebits.proxamic.exampledata.CharacterRecord;
+import com.theunknowablebits.proxamic.exampledata.PlayerRecord;
 
 @DisplayName("MemoryDocumentStore")
 class MemoryDocumentStoreTest {
 
-	
 	MemoryDocumentStore docStore; 
+	
 	
 	@BeforeAll
 	static void setUpBeforeClass() throws Exception {
@@ -43,6 +44,8 @@ class MemoryDocumentStoreTest {
 
 	@AfterEach
 	void tearDown() throws Exception {
+		System.out.println();
+		docStore.dump();
 	}
 
 	@Nested
@@ -94,6 +97,36 @@ class MemoryDocumentStoreTest {
 			docStore.put(otherRecord);  
 		}
 		
+		@Test
+		@DisplayName("indirects")
+		void testIndirects() {
+			// create an instance via new instance
+			CharacterRecord characterRecord = 
+					docStore
+						.newInstance("CharacterRecord.Dana")
+						.as(CharacterRecord.class)
+						.usingName("Dananator")
+						.characterClass("Engineer")
+						.withLevel(50); // its vanilla people
+			
+			PlayerRecord playerRecord = 
+					docStore
+						.newInstance("Player.Dana")
+						.as(PlayerRecord.class)
+						.name("dana");
+			
+			
+			// put the new instance, creating an actual record.
+			docStore.put(characterRecord.usingName("Dananator").characterClass("SoftwareEngineer").withLevel(25));
+			
+			playerRecord.characters().add(characterRecord);
+			
+			docStore.put(playerRecord);
+			
+			assertEquals("Dananator", playerRecord.characters().get(0).name());
+
+		}
+
 		@Test
 		@DisplayName("lock and release")
 		void testLockRelease() {
