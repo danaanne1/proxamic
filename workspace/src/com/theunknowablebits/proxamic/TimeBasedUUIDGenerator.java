@@ -17,6 +17,9 @@ import java.util.UUID;
  * To guarantee the impossibility of overlap, an instance can be obtained with a declared clockSequence. This allows clock sequences
  * to be allocated from a cloud based number generator. (up to 8k distinct clock sequences can be assigned for each node address)
  * <p>
+ * This does not strictly adhere to the nanosecond clock, however it will be time consistent.
+ * Nanosecond values are supplied via a monoatomically increasing counter that resets each millisecond.
+ * <p>
  * @author Dana
  *
  */
