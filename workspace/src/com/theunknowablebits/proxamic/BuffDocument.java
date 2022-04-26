@@ -390,10 +390,33 @@ public class BuffDocument implements Document, DocumentStoreAware {
 					}
 
 					@Override
+					public void clear() {
+						struct.keySet().clear();
+					}
+					
+					@Override
 					public int size() {
 						return struct.keySet().size();
 					}
 				};
+			}
+			
+			@Override
+			public boolean containsKey(Object key) {
+				return struct.keySet().contains(key);
+			}
+			
+			@SuppressWarnings("unchecked")
+			@Override
+			public B get(Object key) {
+				return (B) convertFromStructValue(valueType, struct.get((String)key), indirect);
+			}
+			
+			@Override
+			public B remove(Object key) {
+				B result = get(key);
+				struct.keySet().remove(key);
+				return result;
 			}
 			
 			@SuppressWarnings("unchecked")
