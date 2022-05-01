@@ -81,6 +81,10 @@ public class BuffDocument implements Document, DocumentStoreAware {
 		return root.toString();
 	}
 	
+	public String toString() {
+		return dump();
+	}
+	
 	/** only used when restoring from a doc store style serialization */
 	private transient String resolveKey = null;
 
