@@ -14,7 +14,7 @@ import java.util.function.Supplier;
  */
 public class MemoryDocumentStore extends AbstractDocumentStore implements DocumentStore {
 
-	private static class Record {
+	private class Record {
 		ByteBuffer document;
 		long versionNumber;
 		long lockedUntil;
@@ -30,7 +30,7 @@ public class MemoryDocumentStore extends AbstractDocumentStore implements Docume
 		}
 		public String toString() {
 			StringBuffer buffer = new StringBuffer(String.format("(Lock:%s, LockedUntil:%d, Version:%d)", lockId, lockedUntil, versionNumber));
-			buffer.append(new BuffDocument(document).dump());
+			buffer.append(docFromBytes.apply(document).toString());
 			return buffer.toString();
 		}
 	}
