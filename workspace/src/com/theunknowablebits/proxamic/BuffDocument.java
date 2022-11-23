@@ -300,6 +300,8 @@ public class BuffDocument implements Document, DocumentStoreAware {
 		// if its a document type, we unwrap (and possibly unpack)
 		if (DocumentView.class.isAssignableFrom(returnType)) { 
 			DocumentView ob = new BuffDocument((Struct)structValue).as((Class<? extends DocumentView>) returnType);
+			if (ob.document() instanceof DocumentStoreAware)
+				((DocumentStoreAware)ob.document()).setDocumentStore(getDocumentStore());
 			if (indirect) {
 				String id = ob.document().as(Reference.class).ID();
 				if (id == null)
